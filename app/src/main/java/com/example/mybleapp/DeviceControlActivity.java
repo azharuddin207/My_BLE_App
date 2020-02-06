@@ -27,6 +27,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 public class DeviceControlActivity extends AppCompatActivity {
 
@@ -37,6 +38,7 @@ public class DeviceControlActivity extends AppCompatActivity {
         private String mDeviceAddress;
         private boolean connected = false;
 
+        private TextView DeviceAddress;
         private TextView mConnectionState;
         private  TextView mDataField;
         private BluetoothGattCharacteristic mNotifyCharacteristic;
@@ -50,7 +52,60 @@ public class DeviceControlActivity extends AppCompatActivity {
         BluetoothLeService bluetoothLeService;
 
 
-        private final ServiceConnection mServiceConnection = new ServiceConnection() {
+
+
+        @Override
+        protected void onCreate(Bundle savedInstanceState) {
+
+            super.onCreate(savedInstanceState);
+            setContentView(R.layout.activity_device_control);
+
+            //UI view
+            mConnectionState = findViewById(R.id.connection_state);
+            mDataField = findViewById(R.id.data_value);
+            DeviceAddress = findViewById(R.id.device_address);
+            mGattServicesList = findViewById(R.id.gatt_services_list);
+            mGattServicesList.setOnChildClickListener(servicesListClickListner);
+
+            final Intent intent = getIntent();
+            mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
+            mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
+
+            Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
+            bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
+            Log.d(TAG, "on create called");
+        }
+
+
+        @Override
+        protected void onResume() {
+            super.onResume();
+            DeviceAddress.setText(mDeviceAddress);
+            registerReceiver(gattUpdateReceiver, makeGattUpdateIntentFilter());
+            if (bluetoothLeService != null) {
+                final boolean result = bluetoothLeService.connect(mDeviceAddress);
+                Log.d(TAG, "Connect request result=" + result);
+            }
+        }
+
+
+        @Override
+        protected void onPause() {
+            super.onPause();
+            unregisterReceiver(gattUpdateReceiver);
+        }
+
+
+
+        @Override
+        protected void onDestroy() {
+            super.onDestroy();
+            unbindService(mServiceConnection);
+            bluetoothLeService = null;
+        }
+
+
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
                 Log.d(TAG, "service connected called");
@@ -86,9 +141,7 @@ public class DeviceControlActivity extends AppCompatActivity {
                     updateConnectionState(R.string.disconnected);
                     invalidateOptionsMenu();
                     clearUI();
-                //clearUI();
-                } else if (BluetoothLeService.
-                        ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
+                } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
                     // Show all the supported services and characteristics on the
                     // user interface.
                     displayGattServices(bluetoothLeService.getSupportedGattServices());
@@ -126,10 +179,9 @@ public class DeviceControlActivity extends AppCompatActivity {
                             }
 
                             if((charaProp | BluetoothGattCharacteristic.PROPERTY_WRITE)>0){
-
+                                String data = bluetoothLeService.writeCharacteristics(characteristic);
+                                displayData(data);
                             }
-
-
                             return true;
                         }
                         return false;
@@ -141,7 +193,7 @@ public class DeviceControlActivity extends AppCompatActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    //mConnectionState.setText(resourceId);
+                    mConnectionState.setText(resourceId);
                 }
             });
         }
@@ -149,72 +201,31 @@ public class DeviceControlActivity extends AppCompatActivity {
 
         private void displayData(String data) {
             if (data != null) {
-                //mDataField.setText(data);
+                mDataField.setText(data);
             }
         }
 
 
         private void clearUI() {
             mGattServicesList.setAdapter((SimpleExpandableListAdapter) null);
-            //        mDataField.setText(R.string.no_data);
+                    mDataField.setText(R.string.no_data);
         }
 
-
-
-        @Override
-        protected void onCreate(Bundle savedInstanceState) {
-
-            super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_device_control);
-
-
-            //UI view
-            //mConnectionState = findViewById(R.id.connection_state);
-            //mDataField = findViewById(R.id.data_value);
-            mGattServicesList = findViewById(R.id.gatt_services_list);
-            mGattServicesList.setOnChildClickListener(servicesListClickListner);
-
-            final Intent intent = getIntent();
-            mDeviceName = intent.getStringExtra(EXTRAS_DEVICE_NAME);
-            mDeviceAddress = intent.getStringExtra(EXTRAS_DEVICE_ADDRESS);
-
-            Intent gattServiceIntent = new Intent(this, BluetoothLeService.class);
-            bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);
-            Log.d(TAG, "on create called");
-        }
-
-
-        @Override
-        protected void onResume() {
-            super.onResume();
-            registerReceiver(gattUpdateReceiver, makeGattUpdateIntentFilter());
-            if (bluetoothLeService != null) {
-                final boolean result = bluetoothLeService.connect(mDeviceAddress);
-                Log.d(TAG, "Connect request result=" + result);
-            }
-        }
-
-
-        @Override
-        protected void onPause() {
-            super.onPause();
-            unregisterReceiver(gattUpdateReceiver);
-        }
-
-
-
-        @Override
-        protected void onDestroy() {
-            super.onDestroy();
-            unbindService(mServiceConnection);
-            bluetoothLeService = null;
-        }
 
 
         @Override
         public boolean onCreateOptionsMenu(Menu menu) {
             MenuInflater inflater = getMenuInflater();
             inflater.inflate(R.menu.connect, menu);
+            if(connected){
+                menu.findItem(R.id.menu_connect).setVisible(false);
+                menu.findItem(R.id.menu_disconnect).setVisible(true);
+
+            }else{
+                menu.findItem(R.id.menu_disconnect).setVisible(false);
+                menu.findItem(R.id.menu_connect).setVisible(true);
+
+            }
             return true;
         }
 
@@ -224,11 +235,13 @@ public class DeviceControlActivity extends AppCompatActivity {
             switch (item.getItemId()) {
                 case R.id.menu_connect:
                     bluetoothLeService.connect(mDeviceAddress);
+                    findViewById(R.id.menu_connect).setVisibility(View.GONE);
                     Toast.makeText(this, "connected  " + mDeviceName, Toast.LENGTH_SHORT).show();
                     return true;
                 case R.id.menu_disconnect:
                     bluetoothLeService.disconnect();
-                    Toast.makeText(this, "disconnected  " + mDeviceAddress, Toast.LENGTH_SHORT).show();
+                    findViewById(R.id.menu_disconnect).setVisibility(View.GONE);
+                    Toast.makeText(this, "disconnected  " + mDeviceName, Toast.LENGTH_SHORT).show();
                     return true;
                 case R.id.home:
                     onBackPressed();
@@ -311,6 +324,7 @@ public class DeviceControlActivity extends AppCompatActivity {
                     new int[] { android.R.id.text1, android.R.id.text2 }
             );
             mGattServicesList.setAdapter(gattServiceAdapter);
+
         }
 
 }

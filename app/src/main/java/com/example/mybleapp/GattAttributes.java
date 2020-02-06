@@ -1,11 +1,16 @@
 package com.example.mybleapp;
 
 import java.util.HashMap;
+import java.util.UUID;
 
 public class GattAttributes {
     private static HashMap<String, String> attributes = new HashMap();
     public static String HEART_RATE_MEASUREMENT = "00002a37-0000-1000-8000-00805f9b34fb";
     public static String CLIENT_CHARACTERISTIC_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";
+    public static final UUID UUID_CHARACTERISTIC_CONTROL = UUID.fromString("000033f3-0000-1000-8000-00805f9b34fb");
+    public static final UUID UUID_CHARACTERISTIC_MEASURE = UUID.fromString("000033f4-0000-1000-8000-00805f9b34fb");
+    public static final UUID UUID_SERVICE_JYOU = UUID.fromString("000056ff-0000-1000-8000-00805f9b34fb");
+
 
     static {
         // Sample Services.
@@ -48,8 +53,11 @@ public class GattAttributes {
         attributes.put("00001827-0000-1000-8000-00805f9b34fb", "Mesh Provisioning Service");
         attributes.put("00001828-0000-1000-8000-00805f9b34fb", "Mesh Proxy Service");
         attributes.put("00001829-0000-1000-8000-00805f9b34fb", "Reconnection Configuration");
+        attributes.put("000056ff-0000-1000-8000-00805f9b34fb", "Service jYou");
 
         // Sample Characteristics.
+        attributes.put("000033f4-0000-1000-8000-00805f9b34fb", "CHARACTERISTIC_MEASURE");
+        attributes.put("000033f3-0000-1000-8000-00805f9b34fb", "CHARACTERISTIC_CONTROL");
         attributes.put(HEART_RATE_MEASUREMENT, "Heart Rate Measurement");
         attributes.put("00002a00-0000-1000-8000-00805f9b34fb", "Device Name");
         attributes.put("00002a01-0000-1000-8000-00805f9b34fb", "Appearance");

@@ -76,13 +76,12 @@ public class MainActivity extends AppCompatActivity  implements MyAdapter.onDevi
             recyclerView.setAdapter(mAdapter);
 
 
-
             handler = new Handler();
 
-        //check for ble support
-        if(!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)){
-            Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
-        }
+             //check for ble support
+            if(!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)){
+                Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
+            }
 
             bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
     }
@@ -165,7 +164,12 @@ public class MainActivity extends AppCompatActivity  implements MyAdapter.onDevi
     @RequiresApi(api = Build.VERSION_CODES.M)
     private void scanLeDevice(final boolean enable){
         final BluetoothLeScanner scanner = bluetoothAdapter.getBluetoothLeScanner();
-        String[] peripheralAddresses = new String[]{"2D:02:AD:AE:C6:FC"};
+//        String[] peripheralAddresses = new String[]{"2D:02:AD:AE:C6:FC"};
+//        String[] peripheralAddresses = new String[]{"E8:C7:99:BD:87:13"};
+//        String[] peripheralAddresses = new String[]{"D8:D9:6C:43:8F:E5"};
+        String[] peripheralAddresses = new String[]{"FF:45:75:CF:A9:9D"};
+
+
         // Build filters list
         List<ScanFilter> filters = null;
         if (peripheralAddresses != null) {
